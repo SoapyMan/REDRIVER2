@@ -11,6 +11,10 @@
 #include "CAMERA.H"
 #include "OVERLAY.H"
 #include "EVENT.H"
+#include "CARS.H"
+#include "DENTING.H"
+#include "CIV_AI.H"
+#include "PLAYERS.H"
 
 #include <string.h>
 
@@ -160,6 +164,7 @@ int TAIL_GETTINGCLOSE = 7000;
 int TAIL_GETTINGFAR = 12900;
 int TAIL_TOOCLOSE = 4000;
 int TAIL_TOOFAR = 15900;
+
 
 // [D]
 void InitialiseMissionDefaults(void)
@@ -1100,9 +1105,9 @@ int TargetActive(_TARGET *target, int player)
 
 int Swap2Cars(int curslot, int newslot)
 {
-	UNIMPLEMENTED();
-	return 0;
-	/*
+	//UNIMPLEMENTED();
+	//return 0;
+	
 	char cVar1;
 	_CAR_DATA *p_Var2;
 	_CAR_DATA *p_Var3;
@@ -1110,14 +1115,14 @@ int Swap2Cars(int curslot, int newslot)
 	long *plVar5;
 	int iVar6;
 	_CAR_DATA *p_Var7;
-	undefined4 uVar8;
+	unsigned int uVar8;
 	char cVar9;
 	int in_t2;
 	int in_t3;
 	long lVar10;
-	undefined4 uVar11;
+	unsigned int uVar11;
 	long lVar12;
-	undefined4 uVar13;
+	unsigned int uVar13;
 	long lVar14;
 	_CAR_DATA *cp;
 	char cVar15;
@@ -1129,34 +1134,34 @@ int Swap2Cars(int curslot, int newslot)
 		return newslot;
 	}
 	if (car_data[curslot].controlType == '\x02') {
-		if (*(int *)(car_data[curslot].ai + 8) == 0) {
+		if (*(int *)(car_data[curslot + 8].ai.padid + 8) == 0) {
 			unaff_s4 = -1;
 		}
 		else {
-			unaff_s4 = (*(int *)(car_data[curslot].ai + 8) + -0x1b0) - (int)(car_data + curslot) >> 4;
+			unaff_s4 = (*(int *)(car_data[curslot].ai.padid + 8) + -0x1b0) - (int)(car_data + curslot) >> 4;
 		}
-		if (*(int *)(car_data[curslot].ai + 0xf4) == 0) {
+		if (*(int *)(car_data[curslot].ai.padid + 0xf4) == 0) {
 			unaff_s5 = -1;
 		}
 		else {
-			unaff_s5 = (*(int *)(car_data[curslot].ai + 0xf4) + -0x1b0) - (int)(car_data + curslot) >> 4;
+			unaff_s5 = (*(int *)(car_data[curslot].ai.padid + 0xf4) + -0x1b0) - (int)(car_data + curslot) >> 4;
 		}
 	}
 	car_data[curslot].lowDetail = -1;
 	car_data[curslot].ap.qy = 0;
 	car_data[curslot].ap.qw = 0;
 	if (car_data[newslot].controlType == '\x02') {
-		if (*(int *)(car_data[newslot].ai + 8) == 0) {
+		if (*(int *)(car_data[newslot].ai.padid + 8) == 0) {
 			in_t2 = -1;
 		}
 		else {
-			in_t2 = (*(int *)(car_data[newslot].ai + 8) + -0x1b0) - (int)(car_data + newslot) >> 4;
+			in_t2 = (*(int *)(car_data[newslot].ai.padid + 8) + -0x1b0) - (int)(car_data + newslot) >> 4;
 		}
-		if (*(int *)(car_data[newslot].ai + 0xf4) == 0) {
+		if (*(int *)(car_data[newslot].ai.padid + 0xf4) == 0) {
 			in_t3 = -1;
 		}
 		else {
-			in_t3 = (*(int *)(car_data[newslot].ai + 0xf4) + -0x1b0) - (int)(car_data + newslot) >> 4;
+			in_t3 = (*(int *)(car_data[newslot].ai.padid + 0xf4) + -0x1b0) - (int)(car_data + newslot) >> 4;
 		}
 	}
 	car_data[newslot].lowDetail = -1;
@@ -1187,19 +1192,19 @@ int Swap2Cars(int curslot, int newslot)
 	do {
 		p_Var7 = p_Var2;
 		p_Var3 = cp;
-		uVar8 = *(undefined4 *)((p_Var7->hd).where.m + 2);
-		uVar11 = *(undefined4 *)((p_Var7->hd).where.m + 4);
-		uVar13 = *(undefined4 *)((p_Var7->hd).where.m + 6);
-		*(undefined4 *)(p_Var3->hd).where.m = *(undefined4 *)(p_Var7->hd).where.m;
-		*(undefined4 *)((p_Var3->hd).where.m + 2) = uVar8;
-		*(undefined4 *)((p_Var3->hd).where.m + 4) = uVar11;
-		*(undefined4 *)((p_Var3->hd).where.m + 6) = uVar13;
+		uVar8 = *(unsigned int *)((p_Var7->hd).where.m + 2);
+		uVar11 = *(unsigned int *)((p_Var7->hd).where.m + 4);
+		uVar13 = *(unsigned int *)((p_Var7->hd).where.m + 6);
+		*(unsigned int *)(p_Var3->hd).where.m = *(unsigned int *)(p_Var7->hd).where.m;
+		*(unsigned int *)((p_Var3->hd).where.m + 2) = uVar8;
+		*(unsigned int *)((p_Var3->hd).where.m + 4) = uVar11;
+		*(unsigned int *)((p_Var3->hd).where.m + 6) = uVar13;
 		p_Var2 = (_CAR_DATA *)((p_Var7->hd).where.m + 8);
 		cp = (_CAR_DATA *)((p_Var3->hd).where.m + 8);
 	} while (p_Var2 != (_CAR_DATA *)&car_data[curslot].handbrake);
 	lVar10 = (p_Var7->hd).where.t[0];
 	lVar12 = (p_Var7->hd).where.t[1];
-	*(undefined4 *)(cp->hd).where.m = *(undefined4 *)(p_Var2->hd).where.m;
+	*(unsigned int *)(cp->hd).where.m = *(unsigned int *)(p_Var2->hd).where.m;
 	(p_Var3->hd).where.t[0] = lVar10;
 	(p_Var3->hd).where.t[1] = lVar12;
 	cp = car_data + curslot;
@@ -1224,68 +1229,68 @@ int Swap2Cars(int curslot, int newslot)
 	(p_Var2->hd).where.t[1] = lVar12;
 	cVar15 = (char)newslot;
 	car_data[newslot].id = cVar15;
-	iVar6 = (int)player.cameraCarId;
+	iVar6 = (int)player[0].cameraCarId;
 	cVar9 = (char)curslot;
 	car_data[curslot].id = cVar9;
 	cVar1 = cVar15;
 	if ((iVar6 == curslot) || (cVar1 = cVar9, iVar6 == newslot)) {
-		player.cameraCarId = cVar1;
+		player[0].cameraCarId = cVar1;
 	}
 	cVar1 = cVar15;
-	if (((int)player.targetCarId != curslot) &&
-		(cVar1 = player.targetCarId, (int)player.targetCarId == newslot)) {
+	if (((int)player[0].targetCarId != curslot) &&
+		(cVar1 = player[0].targetCarId, (int)player[0].targetCarId == newslot)) {
 		cVar1 = cVar9;
 	}
-	player.targetCarId = cVar1;
+	player[0].targetCarId = cVar1;
 	cVar1 = cVar15;
-	if (((int)player.playerCarId == curslot) || (cVar1 = cVar9, (int)player.playerCarId == newslot)) {
-		player.playerCarId = cVar1;
+	if (((int)player[0].playerCarId == curslot) || (cVar1 = cVar9, (int)player[0].playerCarId == newslot)) {
+		player[0].playerCarId = cVar1;
 	}
-	if ((int)player.worldCentreCarId == newslot) {
+	if ((int)player[0].worldCentreCarId == newslot) {
 		iVar6 = curslot * 0x29c;
-		player.worldCentreCarId = cVar9;
+		player[0].worldCentreCarId = cVar9;
 	}
 	else {
-		if ((int)player.worldCentreCarId != curslot) goto LAB_00061b4c;
+		if ((int)player[0].worldCentreCarId != curslot) goto LAB_00061b4c;
 		iVar6 = newslot * 0x29c;
-		player.worldCentreCarId = cVar15;
+		player[0].worldCentreCarId = cVar15;
 	}
-	player.spoolXZ = (VECTOR *)((int)car_data[0].hd.where.t + iVar6);
+	player[0].spoolXZ = (VECTOR *)((int)car_data[0].hd.where.t + iVar6);
 LAB_00061b4c:
 	gDontResetCarDamage = 1;
 	cp = car_data + curslot;
 	if (in_t2 == -1) {
-		*(undefined4 *)(car_data[curslot].ai + 8) = 0;
+		*(unsigned int *)(car_data[curslot].ai.padid + 8) = 0;
 	}
 	else {
-		*(byte **)(car_data[curslot].ai + 8) = cp->ai + in_t2 * 0x10 + 0x24;
+		*(unsigned int **)(car_data[curslot].ai.padid + 8) = (unsigned int*)(cp->ai.padid) + in_t2 * 0x10 + 0x24;
 	}
 	if (in_t3 == -1) {
-		*(undefined4 *)(car_data[curslot].ai + 0xf4) = 0;
+		*(unsigned int *)(car_data[curslot].ai.padid + 0xf4) = 0;
 	}
 	else {
-		*(byte **)(car_data[curslot].ai + 0xf4) = cp->ai + in_t3 * 0x10 + 0x24;
+		*(unsigned int **)(car_data[curslot].ai.padid + 0xf4) = (unsigned int*)(cp->ai.padid) + in_t3 * 0x10 + 0x24;
 	}
 	CreateDentableCar(cp);
 	DentCar(cp);
 	cp = car_data + newslot;
 	if (unaff_s4 == -1) {
-		*(undefined4 *)(car_data[newslot].ai + 8) = 0;
+		*(unsigned int *)(car_data[newslot].ai.padid + 8) = 0;
 	}
 	else {
-		*(byte **)(car_data[newslot].ai + 8) = cp->ai + unaff_s4 * 0x10 + 0x24;
+		*(unsigned int **)(car_data[newslot].ai.padid + 8) = (unsigned int*)(cp->ai.padid) + unaff_s4 * 0x10 + 0x24;
 	}
 	if (unaff_s5 == -1) {
-		*(undefined4 *)(car_data[newslot].ai + 0xf4) = 0;
+		*(unsigned int *)(car_data[newslot].ai.padid + 0xf4) = 0;
 	}
 	else {
-		*(byte **)(car_data[newslot].ai + 0xf4) = cp->ai + unaff_s5 * 0x10 + 0x24;
+		*(unsigned int **)(car_data[newslot].ai.padid + 0xf4) = (unsigned int*)(cp->ai.padid) + unaff_s5 * 0x10 + 0x24;
 	}
 	CreateDentableCar(cp);
 	DentCar(cp);
 	gDontResetCarDamage = 0;
 	return newslot;
-	*/
+	
 }
 
 
@@ -2847,12 +2852,13 @@ int MRRequestCar(_TARGET *target)
 
 void MRHandleCarRequests(void)
 {
-	UNIMPLEMENTED();
-	/*
-	if (DAT_000d7c3c != (_TARGET *)0x0) {
-		MRCreateCar(DAT_000d7c3c);
+	//UNIMPLEMENTED();
+	
+	if (MissionTargets != (_TARGET *)0x0) {
+		MRCreateCar(MissionTargets);
 	}
-	return;*/
+
+	return;
 }
 
 
@@ -2890,26 +2896,27 @@ void MRHandleCarRequests(void)
 
 int MRCreateCar(_TARGET *target)
 {
-	UNIMPLEMENTED();
-	return 0;
-	/*
+	//UNIMPLEMENTED();
+	//return 0;
+	
 	bool bVar1;
 	int curslot;
-	uint uVar2;
+	unsigned int uVar2;
 	int newslot;
 	long lVar3;
 	int direction;
-	uint uVar4;
-	uint uVar5;
+	unsigned int uVar4;
+	unsigned int uVar5;
 	long local_40;
-	undefined *local_3c;
+	int *local_3c;
 	int local_38;
 	char local_30[8];
+	int DAT_000d7c3c;
 
 	local_40 = target->data[3];
 	local_38 = target->data[4];
 	uVar2 = target->data[10];
-	local_3c = &DAT_00002710;
+	//local_3c = &DAT_00002710;
 	bVar1 = (uVar2 & 8) != 0;
 	direction = target->data[5];
 	uVar4 = target->data[7];
@@ -2919,8 +2926,8 @@ int MRCreateCar(_TARGET *target)
 		curslot = curslot + -1;
 	}
 	else {
-		curslot = CreateStationaryCivCar
-		(direction, 0, (uint)((uVar2 & 0x40000) != 0) << 10, (long(*)[4])&local_40,
+		curslot = CreateStationaryCivCar(
+		direction, 0, (uint)((uVar2 & 0x40000) != 0) << 10, (long(*)[4])&local_40,
 			uVar4 & 0xff, uVar5 & 0xff, (uint)bVar1);
 	}
 	if (curslot < 0) {
@@ -2929,7 +2936,8 @@ int MRCreateCar(_TARGET *target)
 	}
 	else {
 		if (bVar1) {
-			newslot = NumReplayStreams + cop_adjust;
+			//newslot = NumReplayStream + cop_adjust;
+			newslot = 0 + cop_adjust;
 			cop_adjust = cop_adjust + 1;
 			curslot = Swap2Cars(curslot, newslot);
 		}
@@ -2937,10 +2945,10 @@ int MRCreateCar(_TARGET *target)
 		requestStationaryCivCar = 0;
 		if ((target->data[9] == 3) && ((target->data[10] & 1U) == 0)) {
 			local_30[0] = -1;
-			InitPlayer(_PLAYER_ARRAY_000d979c, car_data + curslot, '\x04', direction, (long(*)[4])&local_40,
+			InitPlayer(player, car_data + curslot, '\x04', direction, (long(*)[4])&local_40,
 				uVar4 & 0xff, uVar5 & 0xff, local_30);
 			EnablePercentageBar(&DamageBar, target->data[0xd]);
-			NewLeadDelay = '\0';
+			//NewLeadDelay = '\0';
 		}
 		target->data[3] = car_data[curslot].hd.where.t[0];
 		lVar3 = car_data[curslot].hd.where.t[2];
@@ -2964,7 +2972,7 @@ int MRCreateCar(_TARGET *target)
 		}
 	}
 	return direction;
-	*/
+	
 }
 
 

@@ -153,4 +153,6 @@ extern void MakePhantomCarEqualPlayerCar(); // 0x00064CD0
 
 extern void DrawMission(void);
 
+extern int CreateStationaryCivCar(int direction, long orientX, long orientZ, long(*startPos)[4], int externalModel, int palette, int controlFlags);
+
 #endif
