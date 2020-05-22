@@ -9,13 +9,14 @@ struct PGXPVData
 {
 	uint lookup;
 	half z;
+	half scr_h;
 };
 
 extern int g_pgxpVertexIndex;
 
 void PGXP_ClearCache();
 bool PGXP_GetCacheData(PGXPVData& out, uint lookup, ushort indexhint);
-void PGXP_UpdateCacheLookup(uint old_lookup, uint new_lookup, float new_z, ushort indexhint);
+PGXPVData& PGXP_GetCacheForUpdate(uint old_lookup, ushort indexhint);
 
 #define PGXP_LOOKUP_HALF(x, y) (x.sh | (y.sh << 16))
 #endif

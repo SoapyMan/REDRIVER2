@@ -125,16 +125,13 @@ struct Vertex
 {
 #if defined(PGXP)
 	float  x, y, page, clut;
+	float  z, w, ofx,  ofy;
 #else
 	short  x, y, page, clut;
 #endif
 
 	u_char u, v, bright, dither;
 	u_char r, g, b, a;
-
-#if defined(PGXP)
-	float z, w;
-#endif
 };
 #pragma pack(pop)
 

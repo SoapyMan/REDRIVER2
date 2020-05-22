@@ -490,6 +490,7 @@ bool PGXP_GetCacheData(PGXPVData& out, uint lookup, ushort indexhint)
 	if (indexhint == 0xFFFF)
 	{
 		out.z = 1.0f;
+		out.scr_h = 0.0f;
 		return false;
 	}
 
@@ -506,28 +507,27 @@ bool PGXP_GetCacheData(PGXPVData& out, uint lookup, ushort indexhint)
 
 	// fill with default values
 	out.z = 1.0f;
+	out.scr_h = 0.0f;
 
 	return false;
 }
 
-void PGXP_UpdateCacheLookup(uint old_lookup, uint new_lookup, float new_z, ushort indexhint)
+PGXPVData& PGXP_GetCacheForUpdate(uint old_lookup, ushort indexhint)
 {
+	static PGXPVData empty;
+
 	if (indexhint == 0xFFFF)
-		return;
+		return empty;
 
 	int start = indexhint - 8; // index hint allows us to start from specific index
 
 	for (int i = max(0, start); i < g_pgxpVertexIndex; i++)
 	{
 		if (g_pgxpCache[i].lookup == old_lookup)
-		{
-			if (new_z >= 0)
-				g_pgxpCache[i].z = new_z;
-
-			g_pgxpCache[i].lookup = new_lookup;
-			return;
-		}
+			return g_pgxpCache[i];
 	}
+
+	return empty;
 }
 
 #endif // PGXP
@@ -576,7 +576,7 @@ int docop2(int op) {
 			double fMAC2 = (/*int44*/(double)((float)TRY * 4096.0f) + ((float)R21 * (float)VX0) + ((float)R22 * (float)VY0) + ((float)R23 * (float)VZ0));
 			double fMAC3 = (/*int44*/(double)((float)TRZ * 4096.0f) + ((float)R31 * (float)VX0) + ((float)R32 * (float)VY0) + ((float)R33 * (float)VZ0));
 
-			double one_by_v = 1.0 / (256.0 * 1024.0);
+			double one_by_v = 1.0 / (512.0 * 1024.0);
 
 			g_FP_SXYZ2.x = fMAC1 * one_by_v;
 			g_FP_SXYZ2.y = fMAC2 * one_by_v;
@@ -585,6 +585,7 @@ int docop2(int op) {
 			PGXPVData vdata;
 			vdata.lookup = PGXP_LOOKUP_HALF(g_FP_SXYZ2.x, g_FP_SXYZ2.y);		// hash short values
 			vdata.z = g_FP_SXYZ2.z;		// store Z
+			vdata.scr_h = float(H) / 256.0f;
 
 			g_pgxpCache[g_pgxpVertexIndex++] = vdata;
 		}
@@ -982,15 +983,16 @@ int docop2(int op) {
 			double fMAC2 = (/*int44*/(double)((float)TRY * 4096.0f) + ((float)R21 * (float)VX(v)) + ((float)R22 * (float)VY(v)) + ((float)R23 * (float)VZ(v)));
 			double fMAC3 = (/*int44*/(double)((float)TRZ * 4096.0f) + ((float)R31 * (float)VX(v)) + ((float)R32 * (float)VY(v)) + ((float)R33 * (float)VZ(v)));
 
-			double one_by_v = 1.0 / (256.0 * 1024.0);
+			double one_by_v = 1.0 / (512.0 * 1024.0);
 
 			g_FP_SXYZ2.x = fMAC1 * one_by_v;
 			g_FP_SXYZ2.y = fMAC2 * one_by_v;
 			g_FP_SXYZ2.z = fMAC3 * one_by_v;
 
 			PGXPVData vdata;
-			vdata.lookup = g_FP_SXYZ2.x.sh | (g_FP_SXYZ2.y.sh << 16);		// hash short values
+			vdata.lookup = PGXP_LOOKUP_HALF(g_FP_SXYZ2.x, g_FP_SXYZ2.y);// g_FP_SXYZ2.x.sh | (g_FP_SXYZ2.y.sh << 16);		// hash short values
 			vdata.z = g_FP_SXYZ2.z;		// store Z
+			vdata.scr_h = float(H) / 256.0f;
 
 			g_pgxpCache[g_pgxpVertexIndex++] = vdata;
 #endif
