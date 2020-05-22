@@ -572,9 +572,15 @@ int docop2(int op) {
 			g_FP_SXYZ0 = g_FP_SXYZ1;
 			g_FP_SXYZ1 = g_FP_SXYZ2;
 
-			g_FP_SXYZ2.x = (double(OFX) + double(float(IR1) * float(h_over_sz3))) / float(1 << 16);
-			g_FP_SXYZ2.y = (double(OFY) + double(float(IR2) * float(h_over_sz3))) / float(1 << 16);
-			g_FP_SXYZ2.z = float(max(SZ3, H / 2)) / float(1 << 16);
+			double fMAC1 = (/*int44*/(double)((float)TRX * 4096.0f) + ((float)R11 * (float)VX0) + ((float)R12 * (float)VY0) + ((float)R13 * (float)VZ0));
+			double fMAC2 = (/*int44*/(double)((float)TRY * 4096.0f) + ((float)R21 * (float)VX0) + ((float)R22 * (float)VY0) + ((float)R23 * (float)VZ0));
+			double fMAC3 = (/*int44*/(double)((float)TRZ * 4096.0f) + ((float)R31 * (float)VX0) + ((float)R32 * (float)VY0) + ((float)R33 * (float)VZ0));
+
+			double one_by_v = 1.0 / (256.0 * 1024.0);
+
+			g_FP_SXYZ2.x = fMAC1 * one_by_v;
+			g_FP_SXYZ2.y = fMAC2 * one_by_v;
+			g_FP_SXYZ2.z = fMAC3 * one_by_v;
 
 			PGXPVData vdata;
 			vdata.lookup = PGXP_LOOKUP_HALF(g_FP_SXYZ2.x, g_FP_SXYZ2.y);		// hash short values
@@ -972,9 +978,15 @@ int docop2(int op) {
 			g_FP_SXYZ0 = g_FP_SXYZ1;
 			g_FP_SXYZ1 = g_FP_SXYZ2;
 
-			g_FP_SXYZ2.x = (double(OFX) + double(float(IR1) * float(h_over_sz3))) / float(1 << 16);
-			g_FP_SXYZ2.y = (double(OFY) + double(float(IR2) * float(h_over_sz3))) / float(1 << 16);
-			g_FP_SXYZ2.z = float(max(SZ3, H / 2)) / float(1 << 16);
+			double fMAC1 = (/*int44*/(double)((float)TRX * 4096.0f) + ((float)R11 * (float)VX(v)) + ((float)R12 * (float)VY(v)) + ((float)R13 * (float)VZ(v)));
+			double fMAC2 = (/*int44*/(double)((float)TRY * 4096.0f) + ((float)R21 * (float)VX(v)) + ((float)R22 * (float)VY(v)) + ((float)R23 * (float)VZ(v)));
+			double fMAC3 = (/*int44*/(double)((float)TRZ * 4096.0f) + ((float)R31 * (float)VX(v)) + ((float)R32 * (float)VY(v)) + ((float)R33 * (float)VZ(v)));
+
+			double one_by_v = 1.0 / (256.0 * 1024.0);
+
+			g_FP_SXYZ2.x = fMAC1 * one_by_v;
+			g_FP_SXYZ2.y = fMAC2 * one_by_v;
+			g_FP_SXYZ2.z = fMAC3 * one_by_v;
 
 			PGXPVData vdata;
 			vdata.lookup = g_FP_SXYZ2.x.sh | (g_FP_SXYZ2.y.sh << 16);		// hash short values

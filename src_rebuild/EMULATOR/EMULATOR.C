@@ -930,7 +930,7 @@ ShaderID g_blit_shader;
 
 #if defined(OGLES) || defined(OGL)
 GLint u_Projection;
-
+GLint u_Projection3D;
 
 #define GTE_PACK_RG\
 	"		float color_16 = (color_rg.y * 256.0 + color_rg.x) * 255.0;\n"
@@ -981,6 +981,7 @@ const char* gte_shader_4 =
 	"	attribute float a_z;\n"
 	"	attribute float a_w;\n"
 	"	uniform mat4 Projection;\n"
+	"	uniform mat4 Projection3D;\n"
 	"	void main() {\n"
 	"		v_texcoord = a_texcoord;\n"
 	"		v_color = a_color;\n"
@@ -989,8 +990,9 @@ const char* gte_shader_4 =
 	"		v_page_clut.y = floor(a_position.z / 16.0) * 256.0;\n"
 	"		v_page_clut.z = fract(a_position.w / 64.0);\n"
 	"		v_page_clut.w = floor(a_position.w / 64.0) / 512.0;\n"
-	"		gl_Position = Projection * vec4(a_position.xy, a_z, 1.0);\n"
-	GTE_PERSPECTIVE_CORRECTION
+	"		gl_Position = Projection3D * (vec4(a_position.xy * vec2(1,-1), a_w, 1.0));\n"
+	"		v_depth = gl_Position.z * 0.001;\n"
+	//GTE_PERSPECTIVE_CORRECTION
 	"	}\n"
 	"#else\n"
 	GTE_FETCH_VRAM_FUNC
@@ -1007,6 +1009,7 @@ const char* gte_shader_4 =
 	"		vec2 clut_pos = v_page_clut.zw;\n"
 	"		clut_pos.x += mix(c[0], c[1], fract(float(index) / 2.0) * 2.0) / 1024.0;\n"
 	"		vec2 color_rg = VRAM(clut_pos);\n"
+	"		gl_FragDepth = v_depth;\n"
 	GTE_PACK_RG
 	GTE_DISCARD
 	GTE_DECODE_RG
@@ -1250,6 +1253,7 @@ void Emulator_CreateGlobalShaders()
 
 #if defined(OGL) || defined(OGLES)
 	u_Projection = glGetUniformLocation(g_gte_shader_4, "Projection");
+	u_Projection3D = glGetUniformLocation(g_gte_shader_4, "Projection3D");
 #endif
 }
 
@@ -1283,8 +1287,8 @@ int Emulator_Initialise()
 	Emulator_CreateGlobalShaders();
 
 #if defined(OGL) || defined(OGLES)
-	glDisable(GL_DEPTH_TEST);
-	//glEnable(GL_DEPTH_TEST);
+	//glDisable(GL_DEPTH_TEST);
+	glEnable(GL_DEPTH_TEST);
 	glBlendColor(0.5f, 0.5f, 0.5f, 0.25f);
 
 	glGenTextures(1, &vramTexture);
@@ -1379,6 +1383,29 @@ void Emulator_Ortho2D(float left, float right, float bottom, float top, float zn
 #endif
 }
 
+void Emulator_Perspective3D(const float fov, const int width, const int height, const float zNear, const float zFar)
+{
+	float sinF, cosF;
+	sinF = sinf(0.5f * fov);
+	cosF = cosf(0.5f * fov);
+
+	float h = cosF / sinF;
+	float w = (h * height) / width;
+
+	float persp[16] = {
+		w, 0, 0, 0,
+		0, h, 0, 0,
+		0, 0, (zFar + zNear) / (zFar - zNear), -(2 * zFar * zNear) / (zFar - zNear),
+		0, 0, 1, 0 
+	};
+
+#if defined(OGL) || defined(OGLES)
+	glUniformMatrix4fv(u_Projection3D, 1, GL_TRUE, persp);
+#elif defined(D3D9)
+	d3ddev->SetVertexShaderConstantF(u_Projection3D, persp, 4);
+#endif
+}
+
 void Emulator_SetShader(const ShaderID &shader)
 {
 #if defined(OGL) || defined(OGLES)
@@ -1391,6 +1418,7 @@ void Emulator_SetShader(const ShaderID &shader)
 #endif
 
 	Emulator_Ortho2D(0.0f, activeDispEnv.disp.w, activeDispEnv.disp.h, 0.0f, -1.0f, 1.0f);
+	Emulator_Perspective3D(0.9f, activeDispEnv.disp.w, activeDispEnv.disp.h, 0.1f, 10000.0f);
 }
 
 void Emulator_SetTexture(TextureID texture, TexFormat texFormat)
@@ -1723,6 +1751,7 @@ bool Emulator_BeginScene()
 
 	glClearDepth(1.0f);
 	glClear(GL_DEPTH_BUFFER_BIT);
+	//glDepthFunc(GL_GREATER);
 
 #elif defined(D3D9)
 	d3ddev->BeginScene();
@@ -1735,6 +1764,7 @@ bool Emulator_BeginScene()
 
 	Emulator_SetShader(g_gte_shader_4);
 	Emulator_Ortho2D(0.0f, activeDispEnv.disp.w, activeDispEnv.disp.h, 0.0f, -1.0f, 1.0f);
+	Emulator_Perspective3D(40, activeDispEnv.disp.w, activeDispEnv.disp.h, 0.01f, 1000.0f);
 
 	begin_scene_flag = true;
 
