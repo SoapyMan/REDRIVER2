@@ -952,7 +952,7 @@ int PrintScaledString(int y, char *string, int scale)
 			setPolyFT4(font);
 
 			setRGB0(font, gFontColour.r, gFontColour.g, gFontColour.b);
-			setXYWH(font, x, y0, x1, height + y);
+			setXYWH(font, x, y0, x1, y1 + height);
 			setUVWH(font, digit_texture.coords.u0 + pDigit->xOffset, digit_texture.coords.v0 + vOff, pDigit->width, height);
 			
 			font->clut = digit_texture.clutid;
