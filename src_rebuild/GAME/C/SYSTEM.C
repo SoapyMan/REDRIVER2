@@ -84,8 +84,17 @@ char* LoadingScreenNames[] = {
 	"GFX\\LOADRIO.TIM",
 };
 
+#ifdef PSX
 CdlFILE currentfileinfo;
 char currentfilename[128] = { 0 };
+#else
+typedef struct {
+	long size;
+} FILEINFO;
+
+FILEINFO currentfileinfo;
+char currentfilename[260] = { 0 };
+#endif
 
 DRAW_MODE draw_mode_pal =
 { 0, 0, 0, 0, 512, 256, 0, 16 };
@@ -428,10 +437,8 @@ int Loadfile(char *name, char *addr)
 // loads file partially into buffer
 int LoadfileSeg(char *name, char *addr, int offset, int loadsize)
 {
-	char namebuffer[64];
 #ifndef PSX
-	int fileSize = 0;
-
+	char namebuffer[260];
 	sprintf(namebuffer, "DRIVER2\\%s", name);
 
 	FILE* fptr = fopen(namebuffer, "rb");
@@ -443,8 +450,22 @@ int LoadfileSeg(char *name, char *addr, int offset, int loadsize)
 		return 0;
 	}
 
-	fseek(fptr, 0, SEEK_END);
-	fileSize = ftell(fptr);
+	long fileSize = 0;
+
+	// let sequential reads calculate filesize once
+	if (strcmp(currentfilename, namebuffer) != 0)
+	{
+		strcpy(currentfilename, namebuffer);
+
+		fseek(fptr, 0, SEEK_END);
+		fileSize = ftell(fptr);
+
+		currentfileinfo.size = fileSize;
+	}
+	else
+	{
+		fileSize = currentfileinfo.size;
+	}
 
 	if (loadsize > fileSize)
 		loadsize = fileSize;
@@ -460,6 +481,7 @@ int LoadfileSeg(char *name, char *addr, int offset, int loadsize)
 #else // PSX
 	UNIMPLEMENTED();
 
+	char namebuffer[64];
 	sprintf(namebuffer, "\\DRIVER2\\%s;1", name);
 
 	/*
@@ -499,7 +521,7 @@ int LoadfileSeg(char *name, char *addr, int offset, int loadsize)
 			if (iVar1 != 2) {
 				DoCDRetry();
 			}
-			iVar1 = CdControlB(2, &auStack48, 0);
+			iVar1 = CdControlB(CdlSetloc, &auStack48, 0);
 		} while (((iVar1 == 0) || (iVar1 = CdRead(1, local_848, 0x80), iVar1 == 0)) ||
 			(iVar1 = CdReadSync(0, auStack2128), iVar1 != 0));
 		if (loadsize <= (int)(0x800 - uVar7)) {
@@ -536,7 +558,7 @@ int LoadfileSeg(char *name, char *addr, int offset, int loadsize)
 			if (iVar5 != 2) {
 				DoCDRetry();
 			}
-			iVar5 = CdControlB(2, &auStack48, 0);
+			iVar5 = CdControlB(CdlSetloc, &auStack48, 0);
 		} while (((iVar5 == 0) || (iVar5 = CdRead(iVar6, addr, 0x80), iVar5 == 0)) ||
 			(iVar5 = CdReadSync(0, auStack2128), iVar5 != 0));
 		addr = addr + iVar6 * 0x800;
@@ -549,7 +571,7 @@ int LoadfileSeg(char *name, char *addr, int offset, int loadsize)
 			if (iVar3 != 2) {
 				DoCDRetry();
 			}
-			iVar3 = CdControlB(2, &auStack48, 0);
+			iVar3 = CdControlB(CdlSetloc, &auStack48, 0);
 		} while (((iVar3 == 0) || (iVar3 = CdRead(1, local_848, 0x80), iVar3 == 0)) ||
 			(iVar3 = CdReadSync(0, auStack2128), iVar3 != 0));
 		iVar3 = 0;
@@ -595,16 +617,18 @@ int LoadfileSeg(char *name, char *addr, int offset, int loadsize)
 // [D]
 void ReportMode(int on)
 {
-	static unsigned char param[8];
-
-	if (XAPrepared() == 0)
+	if (!XAPrepared())
 	{
-		param[0] = 0x80;
+#ifdef PSX
+		static unsigned char param[8];
+
+		param[0] = CdlModeSpeed;
 
 		if (on != 0)
-			param[0] = 0x84;
+			param[0] = CdlModeSpeed | CdlModeRept;
 
-		CdControlB(0xe, param, 0);
+		CdControlB(CdlSetmode, param, 0);
+#endif
 	}
 }
 
@@ -642,7 +666,6 @@ void data_ready(void)
 		CdDataCallback(0);
 		load_complete = 1;
 	}
-	return;
 }
 
 
@@ -827,9 +850,7 @@ void loadsectorsPC(char* filename, char* addr, int sector, int nsectors)
 // [D]
 void EnableDisplay(void)
 {
-	int i;
-
-	for (i = 0; i < NumPlayers; i++)		// [A]
+	for (int i = 0; i < NumPlayers; i++)
 	{
 		ClearOTagR((u_long*)MPBuff[i][0].ot, 0x1080);
 		ClearOTagR((u_long*)MPBuff[i][1].ot, 0x1080);
@@ -862,7 +883,6 @@ void EnableDisplay(void)
 void DisableDisplay(void)
 {
 	SetDispMask(0);
-	return;
 }
 
 
@@ -901,6 +921,7 @@ void DisableDisplay(void)
 /* WARNING: Unknown calling convention yet parameter storage is locked */
 
 int DoNotSwap = 0;
+
 DB* MPlast[2];
 DB* MPcurrent[2];
 
@@ -909,17 +930,15 @@ void SwapDrawBuffers(void)
 {
 	DrawSync(0);
 
-	if (DoNotSwap == 0)
-	{
+	if (!DoNotSwap)
 		PutDispEnv(&current->disp);
-	}
 
 	DoNotSwap = 0;
 
 	PutDrawEnv(&current->draw);
 	DrawOTag((u_long*)(current->ot + 0x107f));
 
-	if ((FrameCnt & 1U) == 0) 
+	if ((FrameCnt & 1) == 0) 
 	{
 		current = &MPBuff[0][1];
 		last = &MPBuff[0][0];
@@ -962,27 +981,23 @@ void SwapDrawBuffers(void)
 // [D]
 void SwapDrawBuffers2(int player)
 {
-	uint uVar1;
-
 	DrawSync(0);
 
-	if (player == 0) {
+	if (player == 0)
 		PutDispEnv(&current->disp);
-	}
 
 	PutDrawEnv(&current->draw);
 	DrawOTag((u_long*)(current->ot + 0x107f));
 
 	if (player == 1)
 	{
-		uVar1 = FrameCnt & 1;
+		int toggle = (FrameCnt & 1);
 
-		// [A] i guess it should work as intended
-		MPcurrent[0] = &MPBuff[0][-uVar1 + 1];
-		MPlast[0] = &MPBuff[0][uVar1];
+		MPcurrent[0] = &MPBuff[0][toggle ^ 1];
+		MPlast[0] = &MPBuff[0][toggle];
 
-		MPcurrent[1] = &MPBuff[1][-uVar1 + 1];
-		MPlast[1] = &MPBuff[1][uVar1];
+		MPcurrent[1] = &MPBuff[1][toggle ^ 1];
+		MPlast[1] = &MPBuff[1][toggle];
 	}
 
 	current = MPcurrent[1 - player];
@@ -1060,18 +1075,14 @@ void UpdatePadData(void)
 
 /* WARNING: Unknown calling convention yet parameter storage is locked */
 
-// [D]
+// [D] [A]
 void SetupDrawBuffers(void)
 {
-	DB *pDVar1;
-	int iVar2;
-	DB **ppDVar3;
-	DB *pDVar4;
-	DB **ppDVar5;
 	RECT16 rect;
 
 	SetDefDispEnv(&MPBuff[0][0].disp, 0, 256, 320, 256);
 	SetDefDispEnv(&MPBuff[0][1].disp, 0, 0, 320, 256);
+
 	MPBuff[0][0].disp.screen.h = 256;
 	MPBuff[0][1].disp.screen.h = 256;
 	MPBuff[0][0].disp.screen.x = draw_mode.framex;
@@ -1084,27 +1095,19 @@ void SetupDrawBuffers(void)
 	else
 		SetupDrawBufferData(1);
 
-	ppDVar5 = MPlast;
-	pDVar1 = MPBuff[0];
-	pDVar4 = MPBuff[0] + 1;
-	ppDVar3 = MPcurrent;
-	iVar2 = 1;
-	do {
-		*ppDVar5 = pDVar4;
-		ppDVar5 = ppDVar5 + 1;
-		pDVar4 = pDVar4 + 2;
-		*ppDVar3 = pDVar1;
-		ppDVar3 = ppDVar3 + 1;
-		iVar2 = iVar2 + -1;
-		pDVar1 = pDVar1 + 2;
-	} while (-1 < iVar2);
-	rect.w = 0x140;
-	rect.x = 0;
-	rect.y = 0;
-	rect.h = 0x200;
+	for (int i = 0; i < 2; i++)
+	{
+		MPcurrent[i] = &MPBuff[i][0];
+		MPlast[i] = &MPBuff[i][1];
+	}
+
+	setRECT16(&rect, 0, 0, 320, 512);
+
 	current = MPcurrent[0];
 	last = MPlast[0];
+
 	ClearImage(&rect, 0, 0, 0);
+
 	DrawSync(0);
 }
 
@@ -1417,7 +1420,7 @@ LAB_0007f244:
 			if (iVar3 != 2) {
 				DoCDRetry();
 			}
-			iVar3 = CdControlB(2, (u_char*)&fp, 0);
+			iVar3 = CdControlB(CdlSetloc, (u_char*)&fp, 0);
 		} while ((iVar3 == 0) || (iVar3 = CdRead(1, (u_long*)_other_buffer, 0x80), iVar3 == 0));
 		iVar3 = CdReadSync(0, result);
 	} while (iVar3 != 0);
