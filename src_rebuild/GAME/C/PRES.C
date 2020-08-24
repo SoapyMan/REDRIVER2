@@ -108,34 +108,36 @@ void SetTextColour(unsigned char Red, unsigned char Green, unsigned char Blue)
 	/* end block 3 */
 	// End Line: 1344
 
-// [D]
+// [D] [A]
 int StringWidth(char *pString)
 {
-	char bVar1;
-	char *pbVar2;
-	int iVar3;
+	char let;
+	int w;
 
-	iVar3 = 0;
-	bVar1 = *pString;
-	pbVar2 = (pString + 1);
-	while (bVar1 != 0) {
-		if (bVar1 == 0x20) {
-			iVar3 = iVar3 + 4;
+	w = 0;
+
+	while ((let = *pString++) != 0) {
+		if (let == ' ')
+		{
+			w += 4;
 		}
-		else {
-			if (((uint)bVar1 + 0x80 & 0xff) < 0xb) {
-				iVar3 = iVar3 + 0x18;
+		else
+		{
+			if (let < 0x80 || let > 0x8a)
+			{
+				char convLet = AsciiTable[let];
+
+				if (convLet != 255)
+					w += fontinfo[convLet].width;
 			}
-			else {
-				if (AsciiTable[(uint)bVar1] != 0xff) {
-					iVar3 = iVar3 + (uint)fontinfo[AsciiTable[(uint)bVar1]].width;
-				}
+			else
+			{
+				w += 24;
 			}
 		}
-		bVar1 = *pbVar2;
-		pbVar2 = pbVar2 + 1;
 	}
-	return iVar3;
+
+	return w;
 }
 
 
@@ -178,25 +180,23 @@ int StringWidth(char *pString)
 // [D]
 int OutputString(char *pString, int formatting, int x, int y, int xw, int r, int g, int b)
 {
-	int iVar1;
+	SetTextColour((u_char)r, (u_char)g, (u_char)b);
 
-	SetTextColour((unsigned char)r, (unsigned char)g, (unsigned char)b);
-
-	if ((formatting & 1U) == 0) {
-		if ((formatting & 2U) == 0) {
-			if ((formatting & 4U) != 0) {
-				iVar1 = StringWidth(pString);
-				PrintString(pString, x - iVar1, y);
-			}
-		}
-		else {
-			iVar1 = StringWidth(pString);
-			x = (x + (xw - iVar1 >> 1)) * 0x10000 >> 0x10;
-			PrintString(pString, x, y);
-		}
-	}
-	else {
+	if ((formatting & 1) != 0)
+	{
 		PrintString(pString, x, y);
+	}
+	else if ((formatting & 2) != 0)
+	{
+		int xpos = x + (xw - StringWidth(pString) >> 1);
+		
+		x = xpos * 0x10000 >> 16;
+
+		PrintString(pString, x, y);
+	}
+	else if ((formatting & 4) != 0)
+	{
+		PrintStringRightAligned(pString, x, y); // [A] was inlined
 	}
 
 	return x;
@@ -218,13 +218,10 @@ int OutputString(char *pString, int formatting, int x, int y, int xw, int r, int
 	/* end block 2 */
 	// End Line: 1526
 
-// [D]
+// [D] [A]
 void PrintStringRightAligned(char *pString, int x, int y)
 {
-	int iVar1;
-
-	iVar1 = StringWidth(pString);
-	PrintString(pString, x - iVar1, y);
+	PrintString(pString, x - StringWidth(pString), y);
 }
 
 
@@ -245,13 +242,10 @@ void PrintStringRightAligned(char *pString, int x, int y)
 	/* end block 2 */
 	// End Line: 1554
 
-// [D]
+// [D] [A]
 void PrintStringCentred(char *pString, short y)
 {
-	int iVar1;
-
-	iVar1 = StringWidth(pString);
-	PrintString(pString, (0x140 - iVar1) * 0x8000 >> 0x10, y);
+	PrintString(pString, (320 - StringWidth(pString)) * 0x8000 >> 0x10, y);
 }
 
 
@@ -282,54 +276,51 @@ void PrintStringCentred(char *pString, short y)
 	/* end block 3 */
 	// End Line: 723
 
-// [D]
+// [D] [A]
 void LoadFont(char *buffer)
 {
-	int *piVar1;
-	char *pcVar2;
-	u_long *puVar3;
-	int iVar4;
-	int iVar5;
-	int iVar6;
-	int *addr;
 	RECT16 rect;
+	char *file;
+	int nchars;
 
-	fontclutpos.x = 976;
-	fontclutpos.y = 256;
-	fontclutpos.w = 16;
-	fontclutpos.h = 1;
-	//addr = (int *)&DAT_0011b400;		// [A] FIXME: this font address might be used somewhere else
-	addr = (int*)_frontend_buffer;
-	if (buffer != NULL) {
-		addr = (int *)buffer;
-	}
-	Loadfile("GFX\\FONT2.FNT", (char *)addr);
-	iVar6 = *addr;
-	memcpy(fontinfo, addr + 1, iVar6 * 8);
-	addr = addr + 1 + iVar6 * 2;
-	pcVar2 = AsciiTable;
+	setRECT16(&fontclutpos, 976, 256, 16, 1);
 
-	memcpy(AsciiTable, addr, 256);
+	//file = (char *)&DAT_0011b400;		// [A] FIXME: this font address might be used somewhere else
+	file = _frontend_buffer;
+	
+	if (buffer != NULL)
+		file = buffer;
 
-	fontclutid = GetClut((int)fontclutpos.x, (int)fontclutpos.y);
-	iVar6 = 0xf;
-	puVar3 = (u_long *)(addr + 0x40);
-	do {
-		iVar6 = iVar6 + -1;
-		*(ushort *)puVar3 = *(ushort *)puVar3 & 0x7fff;
-		puVar3 = (u_long *)((int)puVar3 + 2);
-	} while (-1 < iVar6);
-	*(ushort *)((int)addr + 0x102) = *(ushort *)((int)addr + 0x102) | 0x8000;
-	*(ushort *)(addr + 0x41) = *(ushort *)(addr + 0x41) | 0x8000;
-	LoadImage(&fontclutpos, (u_long *)(addr + 0x40));
-	rect.x = 960;
-	rect.y = 466;
-	rect.w = 64;
-	rect.h = 46;
+	Loadfile("GFX\\FONT2.FNT", file);
+
+	nchars = *(int *)file;
+	file += 4;
+
+	memcpy(fontinfo, file, nchars * sizeof(OUT_FONTINFO));
+	file += (nchars * sizeof(OUT_FONTINFO));
+
+	memcpy(AsciiTable, file, 256);
+	file += 256;
+
+	fontclutid = GetClut(fontclutpos.x, fontclutpos.y);
+
+	short *palette = (short *)file;
+
+	for (int i = 0; i < 16; i++)
+		palette[i] &= 0x7fff;
+
+	palette[1] |= 0x8000;
+	palette[2] |= 0x8000;
+
+	LoadImage(&fontclutpos, (u_long *)file);
+	file += (sizeof(short) * 16);
+
 	fonttpage = GetTPage(0, 0, 960, 466);
-	LoadImage(&rect, (u_long *)(addr + 0x48));
+
+	setRECT16(&rect, 960, 466, 64, 46);
+
+	LoadImage(&rect, (u_long *)file);
 	DrawSync(0);
-	return;
 }
 
 
@@ -362,16 +353,13 @@ void LoadFont(char *buffer)
 	/* end block 4 */
 	// End Line: 1697
 
-// [D]
+// [D] [A]
 void StoreClut2(ulong *pDest, int x, int y)
 {
-	RECT16 local_10;
+	RECT16 rect;
 
-	local_10.x = (short)x;
-	local_10.y = (short)y;
-	local_10.w = 0x10;
-	local_10.h = 1;
-	StoreImage2(&local_10, pDest);
+	setRECT16(&rect, x, y, 16, 1);
+	StoreImage2(&rect, pDest);
 }
 
 
@@ -478,110 +466,88 @@ void SetCLUT16Flags(ushort clutID, ushort mask, char transparent)
 // MAP.C ????
 extern int gShowMap;
 
-// [D]
+// [D] [A]
 int PrintString(char *string, int x, int y)
 {
-	u_char chr;
-	char bVar1;
-	unsigned char uVar2;
-	int iVar3;
-	short sVar4;
-	DB *pDVar5;
-	int x_00;
-	char *pcVar6;
-	uint uVar7;
+	OUT_FONTINFO *pFontInfo;
 	SPRT *font;
-	char *pbVar8;
+	u_char let;
+	u_char c;
 
-	int showMap = gShowMap;
+	if (current == NULL)
+		return -1;
 
-	x_00 = -1;
-	if (current != NULL)
+	font = (SPRT *)current->primptr;
+
+	if (gShowMap)
+		font = (SPRT *)SetFontTPage(font);
+
+	while ((let = *string++) != 0)
 	{
-		font = (SPRT *)current->primptr;
-
-		if (showMap != 0)
-			font = (SPRT *)SetFontTPage(font);
-
-		chr = *string;
-		pbVar8 = (string + 1);
-		x_00 = x;
-		while (chr != 0) 
+		if (let == ' ')
 		{
-			if (chr == 0x20)
+			x += 4;
+		}
+		else
+		{
+			if (let < 0x80 || let > 0x8a)
 			{
-				x_00 = x_00 + 4;
-			}
-			else
-			{
-				if (chr < 0x20 || 0x8a < chr || chr < 0x80) 
-				{
-					bVar1 = AsciiTable[chr];
-					if (AsciiTable[chr] == 0xff)
-						bVar1 = AsciiTable[63];
+				int index = AsciiTable[let];
 
-					uVar7 = (uint)bVar1;
-					chr = fontinfo[uVar7].width;
+				if (index == -1)
+					index = AsciiTable[63];
 
-					setSprt(font);
+				pFontInfo = &fontinfo[index];
+
+				setSprt(font);
 #ifdef PSX
-					setSemiTrans(font, 1);
+				setSemiTrans(font, 1);
 #endif
 
-					//*(undefined *)((int)&font->tag + 3) = 4;
-					//font->code = 'f';
+				setRGB0(font, gFontColour.r, gFontColour.g, gFontColour.b);
+				setXY0(font, x, pFontInfo->offy + y);
+				setUV0(font, pFontInfo->x, pFontInfo->y - 46);
+				setWH(font, pFontInfo->width, pFontInfo->height);
 
-					font->r0 = gFontColour.r;
-					font->g0 = gFontColour.g;
-					uVar2 = gFontColour.b;
-					font->x0 = (short)x_00;
-					font->b0 = uVar2;
-					font->y0 = (short)fontinfo[uVar7].offy + (short)y;
-					font->u0 = fontinfo[uVar7].x;
-					uVar2 = fontinfo[uVar7].y;
-					font->w = (ushort)chr;
-					font->v0 = uVar2 - 46;
-					sVar4 = fontclutid;
+				font->clut = fontclutid;
 
-					font->h = (ushort)fontinfo[uVar7].height;
-					font->clut = sVar4;
-					pDVar5 = current;
-
-					if (showMap == 0)
-					{
-						addPrim(current->ot, font);
-					}
-					else 
-					{
-						DrawPrim(font);
-					}
-
-					font = font + 1;
-					x_00 = x_00 + (uint)chr;
+				if (gShowMap)
+				{
+					DrawPrim(font);
 				}
 				else
 				{
-					if (showMap == 0)
-						font = (SPRT *)SetFontTPage(font);
-
-					font = (SPRT *)DrawButton(chr, font, x_00, y);
-					x_00 = x_00 + 0x18;
-
-					if (showMap != 0)
-						font = (SPRT *)SetFontTPage(font);
+					addPrim(current->ot, font);
 				}
-			}
-			chr = *pbVar8;
-			pbVar8 = pbVar8 + 1;
-		}
 
-		if (showMap == 0)
-			current->primptr = (char *)SetFontTPage(font);
-		else
-			DrawSync(0);
+				font++;
+
+				x += pFontInfo->width;
+			}
+			else
+			{
+				if (gShowMap)
+				{
+					font = (SPRT *)DrawButton(let, font, x, y);
+					font = (SPRT *)SetFontTPage(font);
+				}
+				else
+				{
+					font = (SPRT *)SetFontTPage(font);
+					font = (SPRT *)DrawButton(let, font, x, y);
+				}
+
+				x += 24;
+			}
+		}
 	}
 
-	return x_00;
+	if (gShowMap)
+		DrawSync(0);
+	else
+		current->primptr = (char *)SetFontTPage(font);
+
+	return x;
 }
 
 
@@ -624,59 +590,49 @@ int PrintString(char *string, int x, int y)
 	/* end block 3 */
 	// End Line: 1130
 
-// [D]
+// [D] [A]
 short PrintDigit(int x, int y, char *string)
 {
-	char bVar1;
-	char bVar2;
-	unsigned char uVar3;
-	DB *pDVar4;
-	short sVar5;
-	uint uVar6;
-	ulong *puVar7;
 	SPRT *font;
-	int iVar8;
-	char cVar9;
-
-	sVar5 = (short)x;
-	bVar1 = *string;
-
-	while (bVar1 != 0) 
+	char width;
+	char fixedWidth;
+	char vOff;
+	char h;
+	char convLet;
+	char let;
+	
+	while ((let = *string++) != 0) 
 	{
-		bVar1 = *string;
-		string++;
-
-		if (bVar1 == 0x3a)
+		if (let == ':')
 		{
-			uVar6 = 0xb;
+			convLet = 11;
 		}
-		else if (bVar1 == 0x2f) 
+		else if (let == '/') 
 		{
-			uVar6 = 10;
+			convLet = 10;
 		}
 		else 
 		{
-			uVar6 = (uint)bVar1 - 0x30 & 0xff;
+			convLet = (let - '0');
 		}
 
-		bVar2 = fontDigit[uVar6].width;
-		iVar8 = 0x10;
+		FONT_DIGIT *pDigit = &fontDigit[convLet];
 
-		if (bVar1 == 0x3a) 
+		fixedWidth = pDigit->width;
+		width = 16;
+
+		if (let == ':') 
+			width = 8;
+
+		if (convLet < 6) 
 		{
-			iVar8 = 8;
-		}
-
-		cVar9 = '\0';
-
-		if (uVar6 < 6) 
-		{
-			sVar5 = 0x1c;
+			vOff = 0;
+			h = 28;
 		}
 		else 
 		{
-			cVar9 = '\x1c';
-			sVar5 = 0x1f;
+			vOff = 28;
+			h = 31;
 		}
 
 		font = (SPRT *)current->primptr;
@@ -687,51 +643,32 @@ short PrintDigit(int x, int y, char *string)
 		setSemiTrans(font, 1);
 #endif
 
-		font->r0 = gFontColour.r;
-		font->g0 = gFontColour.g;
-		font->b0 = gFontColour.b;
+		setRGB0(font, gFontColour.r, gFontColour.g, gFontColour.b);
+		setXY0(font, x + ((width - fixedWidth) >> 1), y);
+		setUV0(font, digit_texture.coords.u0 + pDigit->xOffset, digit_texture.coords.v0 + vOff);
+		setWH(font, fixedWidth, h);
 
-		font->x0 = (short)x + (short)((int)(iVar8 - (uint)bVar2) >> 1);
-		font->y0 = (short)y;
-		
-		font->u0 = digit_texture.coords.u0 + fontDigit[uVar6].xOffset;
-		font->v0 = cVar9 + digit_texture.coords.v0;
-
-		font->w = (ushort)bVar2;
-		font->h = sVar5;
-		
-		pDVar4 = current;
 		font->clut = digit_texture.clutid;
 
 		addPrim(current->ot, font);
+		font++;
 		
-		x = x + iVar8;
-		sVar5 = (short)x;
-
-		bVar1 = *string;
-		font = font + 1;
+		x += width;
 	}
 
 	POLY_FT3* null = (POLY_FT3*)current->primptr;
-	setPolyFT3(null);
-#ifdef PSX
-	setSemiTrans(null, 1);
-#endif
 
-	null->x0 = -1;
-	null->y0 = -1;
-	null->x1 = -1;
-	null->y1 = -1;
-	null->x2 = -1;
-	null->y2 = -1;
+	setPolyFT3(null);
+	setSemiTrans(null, 1);
+
+	setXY3(null, -1, -1, -1, -1, -1, -1);
+
 	null->tpage = digit_texture.tpageid;
 	
 	addPrim(current->ot, null);
 	current->primptr += sizeof(POLY_FT3);
 
-	pDVar4 = current;
-	
-	return sVar5;
+	return x;
 }
 
 
@@ -755,13 +692,10 @@ short PrintDigit(int x, int y, char *string)
 	/* end block 3 */
 	// End Line: 2128
 
-// [D]
+// [D] [A]
 int PrintStringFeature(char *string, int x, int y, int w, int h, int transparent)
 {
-	int iVar1;
-
-	iVar1 = PrintString(string, x, y);
-	return iVar1;
+	return PrintString(string, x, y);
 }
 
 
@@ -810,9 +744,9 @@ void PrintStringBoxed(char *string, int ix, int iy)
 	unsigned char uVar3;
 	short sVar4;
 	int iVar6;
-	uint uVar7;
+	int index;
 	SPRT *font;
-	int iVar9;
+	int x;
 	int iVar10;
 	char word[32];
 
@@ -821,15 +755,15 @@ void PrintStringBoxed(char *string, int ix, int iy)
 	if (*string != 0) 
 	{
 		iVar10 = 1;
-		iVar9 = ix;
+		x = ix;
 		do {
 			string = GetNextWord(string, word);
 			iVar6 = StringWidth(word);
 
-			if (0x134 < iVar9 + iVar6 && (iVar10 != 1 || (*string != 0)))
+			if (0x134 < x + iVar6 && (iVar10 != 1 || (*string != 0)))
 			{
 				iy = iy + 0xe;
-				iVar9 = ix;
+				x = ix;
 			}
 
 			pbVar2 = word;
@@ -839,33 +773,29 @@ void PrintStringBoxed(char *string, int ix, int iy)
 			{
 				if (bVar1 == 32) 
 				{
-					iVar9 = iVar9 + 4;
+					x = x + 4;
 				}
 				else 
 				{
-					uVar7 = AsciiTable[bVar1];
+					index = AsciiTable[bVar1];
 
-					if (uVar7 != 0xffffffff) 
+					if (index != -1) 
 					{
+						OUT_FONTINFO *pFontInfo = &fontinfo[index];
+
 						setSprt(font);
 
-						font->r0 = gFontColour.r;
-						font->g0 = gFontColour.g;
-						font->b0 = gFontColour.b;
+						setRGB0(font, gFontColour.r, gFontColour.g, gFontColour.b);
+						setXY0(font, x, pFontInfo->offy + iy);
+						setUV0(font, pFontInfo->x, pFontInfo->y - 46);
+						setWH(font, pFontInfo->width, pFontInfo->height);
 
-						font->x0 = iVar9;
-						font->y0 = fontinfo[uVar7].offy + iy;
-						font->u0 = fontinfo[uVar7].x;
-						font->v0 = fontinfo[uVar7].y - 46;
-
-						font->w = fontinfo[uVar7].width;
 						font->clut = fontclutid;
-						font->h = fontinfo[uVar7].height;;
 
 						addPrim(current->ot, font);
-
 						font++;
-						iVar9 = iVar9 + (uint)fontinfo[uVar7].width;
+
+						x += pFontInfo->width;
 					}
 				}
 
@@ -878,21 +808,14 @@ void PrintStringBoxed(char *string, int ix, int iy)
 	POLY_FT3* null = (POLY_FT3*)font;
 
 	setPolyFT3(null);
-#ifdef PSX
 	setSemiTrans(null, 1);
-#endif
 
-	null->x0 = -1;
-	null->y0 = -1;
-	null->x1 = -1;
-	null->y1 = -1;
-	null->x2 = -1;
-	null->y2 = -1;
+	setXY3(null, -1, -1, -1, -1, -1, -1);
+
 	null->tpage = fonttpage;
-
 	addPrim(current->ot, null);
 
-	current->primptr = (char*)(null+1);
+	current->primptr += sizeof(POLY_FT3);
 }
 
 
@@ -932,16 +855,11 @@ void PrintStringBoxed(char *string, int ix, int iy)
 
 /* WARNING: Unknown calling convention yet parameter storage is locked */
 
-// [D]
+// [D] [A]
 void InitButtonTextures(void)
 {
-	int i;
-	i = 0;
-	while (i < 11)
-	{
+	for (int i = 0; i < 11; i++)
 		GetTextureDetails(button_names[i], &button_textures[i]);
-		i++;
-	}
 }
 
 
@@ -978,127 +896,78 @@ void InitButtonTextures(void)
 	/* end block 3 */
 	// End Line: 1597
 
-// [D]
+// [D] [A]
 int PrintScaledString(int y, char *string, int scale)
 {
-	unsigned char bVar1;
-	char cVar2;
-	unsigned char uVar3;
-	unsigned char uVar4;
-	DB *pDVar5;
-	short sVar6;
-	int iVar7;
-	int iVar8;
-	uint uVar9;
-	unsigned char uVar10;
-	ulong *puVar11;
-	unsigned char uVar12;
 	POLY_FT4 *font;
-	short sVar13;
-	int iVar14;
-	char *pbVar15;
-	char cVar16;
-	int iVar17;
+	int x;
+	int width;
+	int height;
+	char vOff;
+	char let;
+	char convLet;
 
-	iVar7 = StringWidth(string);
-	iVar7 = iVar7 * scale;
+	width = StringWidth(string);
+	width *= scale;
 
 	font = (POLY_FT4 *)current->primptr;
 
 	if (gShowMap != 0)
 		font = (POLY_FT4 *)SetFontTPage(font);
 
-	bVar1 = *string;
-	pbVar15 = (char *)(string + 1);
-	iVar7 = 0x140 - (iVar7 >> 4) >> 1;
+	x = (320 - (width >> 4) >> 1);
 
-	uVar12 = digit_texture.coords.u0;
-	uVar10 = digit_texture.coords.v0;
-
-	while (bVar1 != 0) 
+	while ((let = *string++) != 0) 
 	{
-		// WTF is this?
-		//digit_texture.coords.u0 = uVar12
-		//digit_texture.coords.v0 = uVar10,
+		convLet = (let - '0');
 
-		uVar9 = (uint)bVar1 - 0x30;
-		if (bVar1 == 0x20) 
+		if (let == ' ') 
 		{
-			iVar8 = scale;
-			if (scale < 0) {
-				iVar8 = scale + 3;
-			}
-			iVar8 = iVar7 + (iVar8 >> 2);
+			width = scale;
+			
+			if (scale < 0)
+				width = scale + 3;
+
+			x += (width >> 2);
 		}
-		else 
+		else if (convLet < 10)
 		{
-			iVar8 = iVar7;
-			if ((uVar9 & 0xff) < 10) {
-				bVar1 = fontDigit[uVar9].width;
-				cVar16 = '\0';
+			FONT_DIGIT *pDigit = &fontDigit[convLet];
 
-				if (uVar9 < 6) 
-				{
-					iVar14 = 0x1c;
-				}
-				else 
-				{
-					cVar16 = '\x1c';
-					iVar14 = 0x1f;
-				}
-
-				iVar8 = (iVar14 >> 1) * scale;
-
-				iVar17 = (uint)bVar1 * scale;
-				sVar6 = (short)(iVar8 >> 4);
-				sVar13 = (short)y - sVar6;
-
-				iVar8 = iVar7 + (iVar17 >> 4);
-				cVar2 = fontDigit[uVar9].xOffset;
-
-				setPolyFT4(font);
-
-				font->r0 = gFontColour.r;
-				sVar6 = (short)y + sVar6;
-				uVar12 = uVar12 + cVar2;
-				uVar10 = cVar16 + uVar10;
-				font->g0 = gFontColour.g;
-				uVar4 = gFontColour.b;
-				font->y2 = sVar6;
-				font->y3 = sVar6;
-				uVar3 = uVar12 + bVar1;
-				font->v0 = uVar10;
-				font->v1 = uVar10;
-				uVar10 = uVar10 + (char)iVar14;
-				font->x0 = (short)iVar7;
-				font->y0 = sVar13;
-				font->x1 = (short)iVar8;
-				font->y1 = sVar13;
-				font->x2 = (short)iVar7;
-				font->x3 = (short)iVar8;
-				font->u0 = uVar12;
-				font->u1 = uVar3;
-				font->u2 = uVar12;
-				font->v2 = uVar10;
-				font->u3 = uVar3;
-				font->v3 = uVar10;
-				font->b0 = uVar4;
-				pDVar5 = current;
-				font->clut = digit_texture.clutid;
-				font->tpage = digit_texture.tpageid;
-
-				addPrim(current->ot, font);
-				font++;
+			if (convLet < 6)
+			{
+				vOff = 0;
+				height = 28;
 			}
+			else
+			{
+				vOff = 28;
+				height = 31;
+			}
+
+			int y1 = ((height >> 1) * scale) >> 4;
+			int x1 = (pDigit->width * scale) >> 4;
+			int y0 = (y - y1);
+
+			setPolyFT4(font);
+
+			setRGB0(font, gFontColour.r, gFontColour.g, gFontColour.b);
+			setXYWH(font, x, y0, x1, height + y);
+			setUVWH(font, digit_texture.coords.u0 + pDigit->xOffset, digit_texture.coords.v0 + vOff, pDigit->width, height);
+			
+			font->clut = digit_texture.clutid;
+			font->tpage = digit_texture.tpageid;
+
+			addPrim(current->ot, font);
+			font++;
+
+			x += x1;
 		}
-		bVar1 = *pbVar15;
-		pbVar15 = pbVar15 + 1;
-		iVar7 = iVar8;
-		uVar12 = digit_texture.coords.u0;
-		uVar10 = digit_texture.coords.v0;
 	}
-	*(POLY_FT4 **)&current->primptr = font;
-	return iVar7;
+
+	current->primptr = (char *)font;
+
+	return x;
 }
 
 
@@ -1185,7 +1054,7 @@ char * GetNextWord(char *string, char *word)
 	/* end block 3 */
 	// End Line: 1834
 
-// [D]
+// [D] [A]
 void* DrawButton(unsigned char button, void *prim, int x, int y)
 {
 	TEXTURE_DETAILS *btn;
@@ -1196,28 +1065,20 @@ void* DrawButton(unsigned char button, void *prim, int x, int y)
 	sprt = (SPRT*)prim;
 	 
 	setSprt(sprt);
+	setRGB0(sprt, 128, 128, 128);
+	setXY0(sprt, x, y - 3);
+	setUV0(sprt, btn->coords.u0, btn->coords.v0);
+	setWH(sprt, btn->coords.u1 - btn->coords.u0, btn->coords.v2 - btn->coords.v0);
 
-	sprt->r0 = 128;
-	sprt->g0 = 128;
-	sprt->b0 = 128;
-	sprt->x0 = x;
-	sprt->y0 = y - 3;
-	sprt->u0 = btn->coords.u0;
-	sprt->v0 = btn->coords.v0;
-	sprt->w = btn->coords.u1 - btn->coords.u0;
-	sprt->h = btn->coords.v2 - btn->coords.v0;
 	sprt->clut = btn->clutid;
 
 	null = (POLY_FT3*)(sprt + 1);
+
 	setPolyFT3(null);
 	setSemiTrans(null, 1);
 
-	null->x0 = -1;
-	null->y0 = -1;
-	null->x1 = -1;
-	null->y1 = -1;
-	null->x2 = -1;
-	null->y2 = -1;
+	setXY3(null, -1, -1, -1, -1, -1, -1);
+
 	null->tpage = btn->tpageid;
 
 	if (gShowMap == 0)
@@ -1231,7 +1092,7 @@ void* DrawButton(unsigned char button, void *prim, int x, int y)
 		DrawPrim(sprt);
 	}
 
-	return null+1;
+	return null + 1;
 }
 
 
@@ -1259,22 +1120,16 @@ void* DrawButton(unsigned char button, void *prim, int x, int y)
 	/* end block 3 */
 	// End Line: 2621
 
-// [D]
+// [D] [A]
 void* SetFontTPage(void *prim)
 {
 	POLY_FT3* null = (POLY_FT3*)prim;
 
 	setPolyFT3(null);
-#ifdef PSX
 	setSemiTrans(null, 1);
-#endif
 
-	null->x0 = -1;
-	null->y0 = -1;
-	null->x1 = -1;
-	null->y1 = -1;
-	null->x2 = -1;
-	null->y2 = -1;
+	setXY3(null, -1, -1, -1, -1, -1, -1);
+
 	null->tpage = fonttpage;
 
 	if (gShowMap == 0) 
@@ -1286,7 +1141,7 @@ void* SetFontTPage(void *prim)
 		DrawPrim(prim);
 	}
 
-	return null+1;
+	return null + 1;
 }
 
 
