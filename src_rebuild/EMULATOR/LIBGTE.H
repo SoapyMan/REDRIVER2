@@ -183,6 +183,8 @@ extern long SquareRoot0(long a);
 
 extern int rsin(int a);
 extern int rcos(int a);
+extern int rcossin(int a, int *sin);
+extern int rcossin2(int a, int *sincos);
 extern long ratan2(long y, long x);
 
 #endif

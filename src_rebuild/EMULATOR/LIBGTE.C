@@ -1429,19 +1429,19 @@ VECTOR* ApplyRotMatrixLV(VECTOR* v0, VECTOR* v1)
 	gte_rtir();
 
 	if (tmpLO.vx < 0)
-		tmpLO.vx = tmpLO.vx * 8;
+		tmpLO.vx *= 8;
 	else
-		tmpLO.vx = tmpLO.vx << 3;
+		tmpLO.vx <<= 3;
 
 	if (tmpLO.vy < 0)
-		tmpLO.vy = tmpLO.vy * 8;
+		tmpLO.vy *= 8;
 	else
-		tmpLO.vy = tmpLO.vy << 3;
+		tmpLO.vy <<= 3;
 
 	if (tmpLO.vz < 0)
-		tmpLO.vz = tmpLO.vz * 8;
+		tmpLO.vz *= 8;
 	else
-		tmpLO.vz = tmpLO.vz << 3;
+		tmpLO.vz <<= 3;
 
 	gte_stlvnl(&tmpHI);
 
@@ -1494,16 +1494,13 @@ MATRIX* RotMatrix(struct SVECTOR* r, MATRIX* m)
 	int s2p0, s2m0, c2p0, c2m0;
 	int	s2c0, s2s0, c2c0, c2s0;
 
-	c0 = rcos(r->vx);
-	c1 = rcos(r->vy);
-	c2 = rcos(r->vz);
-	s0 = rsin(r->vx);
-	s1 = rsin(r->vy);
-	s2 = rsin(r->vz);
-	s2p0 = rsin(r->vz + r->vx);
-	s2m0 = rsin(r->vz - r->vx);
-	c2p0 = rcos(r->vz + r->vx);
-	c2m0 = rcos(r->vz - r->vx);
+	c0 = rcossin(r->vx, &s0);
+	c1 = rcossin(r->vy, &s1);
+	c2 = rcossin(r->vz, &s2);
+	
+	c2p0 = rcossin(r->vz + r->vx, &s2p0);
+	c2m0 = rcossin(r->vz - r->vx, &s2m0);
+
 	s2c0 = (s2p0 + s2m0) / 2;
 	c2s0 = (s2p0 - s2m0) / 2;
 	s2s0 = (c2m0 - c2p0) / 2;
@@ -1522,139 +1519,89 @@ MATRIX* RotMatrix(struct SVECTOR* r, MATRIX* m)
 	return m;
 }
 
+// [A] [T]
 MATRIX* RotMatrixYXZ(struct SVECTOR* r, MATRIX* m)
 {
-	int iVar1;
-	int iVar2;
-	short sVar3;
-	int uVar4;
-	int iVar5;
-	int iVar6;
-	int iVar7;
-	int iVar8;
+	int c0, c1, c2;
+	int s0, s1, s2;
 
-	uVar4 = (r->vx);
+	c0 = rcossin2(r->vx, &s0);
+	c1 = rcossin2(r->vy, &s1);
+	c2 = rcossin2(r->vz, &s2);
+	
+	// Y-axis
+	m->m[1][0] = FIXED(s2 * c0);
+	m->m[1][1] = FIXED(c2 * c0);
+	m->m[1][2] = -s0;
 
-	if (uVar4 < 0)
-	{
-		iVar6 = *(int*)(rcossin_tbl + (-uVar4 & 0xfff) * 2);
-		sVar3 = iVar6;
-		iVar5 = -sVar3;
-	}
-	else
-	{
-		iVar6 = *(int*)(rcossin_tbl + (uVar4 & 0xfff) * 2);
-		iVar5 = iVar6;
-		sVar3 = -iVar6;
-	}
+	// X-axis
+	int x0 = FIXED(s1 * s0);
+	m->m[0][0] = FIXED(c1 * c2) + FIXED(x0 * s2);
+	m->m[0][1] = FIXED(x0 * c2) - FIXED(c1 * s2);
+	m->m[0][2] = FIXED(s1 * c0);
 
-	iVar6 = iVar6 >> 0x10;
-	uVar4 = (r->vy);
-
-	if (uVar4 < 0)
-	{
-		iVar7 = *(int*)(rcossin_tbl + (-uVar4 & 0xfff) * 2);
-		iVar1 = -iVar7;
-	}
-	else
-	{
-		iVar7 = *(int*)(rcossin_tbl + (uVar4 & 0xfff) * 2);
-		iVar1 = iVar7;
-	}
-
-	iVar7 = iVar7 >> 0x10;
-	uVar4 = (r->vz);
-
-	m->m[1][2] = sVar3;
-	m->m[0][2] = FIXED(iVar1 * iVar6);
-	sVar3 = FIXED(iVar7 * iVar6);
-
-	if (uVar4 < 0)
-	{
-		m->m[2][2] = sVar3;
-		iVar8 = *(int*)(rcossin_tbl + (-uVar4 & 0xfff) * 2);
-		iVar2 = -iVar8;
-	}
-	else
-	{
-		m->m[2][2] = sVar3;
-		iVar8 = *(int*)(rcossin_tbl + (uVar4 & 0xfff) * 2);
-		iVar2 = iVar8;
-	}
-
-	iVar8 = iVar8 >> 0x10;
-
-	m->m[1][0] = FIXED(iVar2 * iVar6);
-	m->m[1][1] = FIXED(iVar8 * iVar6);
-	iVar6 = FIXED(iVar1 * iVar5);
-	m->m[0][0] = FIXED(iVar7 * iVar8) + FIXED(iVar6 * iVar2);
-	m->m[0][1] = FIXED(iVar6 * iVar8) - FIXED(iVar7 * iVar2);
-	iVar5 = FIXED(iVar7 * iVar5);
-	m->m[2][1] = FIXED(iVar1 * iVar2) + FIXED(iVar5 * iVar8);
-	m->m[2][0] = FIXED(iVar5 * iVar2) - FIXED(iVar1 * iVar8);
+	// Z-axis
+	int z0 = FIXED(c1 * s0);
+	m->m[2][1] = FIXED(s1 * s2) + FIXED(z0 * c2);
+	m->m[2][0] = FIXED(z0 * s2) - FIXED(s1 * c2);
+	m->m[2][2] = FIXED(c1 * c0);
 
 	return m;
 }
 
 MATRIX* RotMatrixX(long r, MATRIX* m)
 {
-	int s0 = rsin(r);
-	int c0 = rcos(r);
-	int t1, t2;
-	t1 = m->m[1][0];
-	t2 = m->m[2][0];
-	m->m[1][0] = FIXED(t1 * c0 - t2 * s0);
-	m->m[2][0] = FIXED(t1 * s0 + t2 * c0);
-	t1 = m->m[1][1];
-	t2 = m->m[2][1];
-	m->m[1][1] = FIXED(t1 * c0 - t2 * s0);
-	m->m[2][1] = FIXED(t1 * s0 + t2 * c0);
-	t1 = m->m[1][2];
-	t2 = m->m[2][2];
-	m->m[1][2] = FIXED(t1 * c0 - t2 * s0);
-	m->m[2][2] = FIXED(t1 * s0 + t2 * c0);
+	int c0, s0;
+
+	c0 = rcossin(r, &s0);
+
+#	pragma unroll(3)
+	for (int i = 0; i < 3; i++)
+	{
+		int y0 = m->m[1][i];
+		int z0 = m->m[2][i];
+
+		m->m[1][i] = FIXED(y0 * c0 - z0 * s0);
+		m->m[2][i] = FIXED(y0 * s0 + z0 * c0);
+	}
 
 	return m;
 }
 
 MATRIX* RotMatrixY(long r, MATRIX* m)
 {
-	int s0 = rsin(r);
-	int c0 = rcos(r);
-	int t1, t2;
-	t1 = m->m[0][0];
-	t2 = m->m[2][0];
-	m->m[0][0] = FIXED(t1 * c0 + t2 * s0);
-	m->m[2][0] = FIXED(-t1 * s0 + t2 * c0);
-	t1 = m->m[0][1];
-	t2 = m->m[2][1];
-	m->m[0][1] = FIXED(t1 * c0 + t2 * s0);
-	m->m[2][1] = FIXED(-t1 * s0 + t2 * c0);
-	t1 = m->m[0][2];
-	t2 = m->m[2][2];
-	m->m[0][2] = FIXED(t1 * c0 + t2 * s0);
-	m->m[2][2] = FIXED(-t1 * s0 + t2 * c0);
+	int c0, s0;
+
+	c0 = rcossin(r, &s0);
+	
+#	pragma unroll(3)
+	for (int i = 0; i < 3; i++)
+	{
+		int x0 = m->m[0][i];
+		int z0 = m->m[2][i];
+
+		m->m[0][i] = FIXED(x0 * c0 + z0 * s0);
+		m->m[2][i] = FIXED(-x0 * s0 + z0 * c0);
+	}
 
 	return m;
 }
 
 MATRIX* RotMatrixZ(long r, MATRIX* m)
 {
-	int s0 = rsin(r);
-	int c0 = rcos(r);
-	int t1, t2;
-	t1 = m->m[0][0];
-	t2 = m->m[1][0];
-	m->m[0][0] = FIXED(t1 * c0 - t2 * s0);
-	m->m[1][0] = FIXED(t1 * s0 + t2 * c0);
-	t1 = m->m[0][1];
-	t2 = m->m[1][1];
-	m->m[0][1] = FIXED(t1 * c0 - t2 * s0);
-	m->m[1][1] = FIXED(t1 * s0 + t2 * c0);
-	t1 = m->m[0][2];
-	t2 = m->m[1][2];
-	m->m[0][2] = FIXED(t1 * c0 - t2 * s0);
-	m->m[1][2] = FIXED(t1 * s0 + t2 * c0);
+	int c0, s0;
+
+	c0 = rcossin(r, &s0);
+	
+#	pragma unroll(3)
+	for (int i = 0; i < 3; i++)
+	{
+		int x0 = m->m[0][i];
+		int y0 = m->m[1][i];
+
+		m->m[0][i] = FIXED(x0 * c0 - y0 * s0);
+		m->m[1][i] = FIXED(x0 * s0 + y0 * c0);
+	}
 
 	return m;
 }
@@ -1730,6 +1677,45 @@ int rcos(int a)
 		return rcossin_tbl[(-a & 0xfffU) * 2 + 1];
 
 	return rcossin_tbl[(a & 0xfffU) * 2 + 1];
+}
+
+// one-shot cos/sin
+int rcossin(int a, int *sin)
+{
+	short *cos_sin;
+
+	if (a < 0)
+	{
+		cos_sin = &rcossin_tbl[(-a & 0xfff) * 2];
+		*sin = -cos_sin[0];
+}
+	else
+	{
+		cos_sin = &rcossin_tbl[(a & 0xfff) * 2];
+		*sin = cos_sin[0];
+	}
+
+	return cos_sin[1]; // cos
+}
+
+// one-shot cos/sin&cos
+// originally from RotMatrixYXZ
+int rcossin2(int a, int *sincos)
+{
+	int cos_sin;
+
+	if (a < 0)
+	{
+		cos_sin = *(int *)&rcossin_tbl[(-a & 0xfff) * 2];
+		*sincos = -cos_sin;
+	}
+	else
+	{
+		cos_sin = *(int *)&rcossin_tbl[(a & 0xfff) * 2];
+		*sincos = cos_sin;
+	}
+
+	return (cos_sin >> 16); // cos
 }
 
 long ratan2(long y, long x)
