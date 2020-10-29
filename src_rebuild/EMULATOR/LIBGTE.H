@@ -166,6 +166,7 @@ extern MATRIX* MulMatrix(MATRIX* m0, MATRIX* m1);
 extern MATRIX* MulMatrix2(MATRIX* m0, MATRIX* m1);
 extern void SetBackColor(long rbk, long gbk, long bbk);
 extern void SetFarColor(long rfc, long gfc, long bfc);
+extern void IdentityMatrix(MATRIX *m);
 extern MATRIX* RotMatrix(struct SVECTOR* r, MATRIX* m);
 extern MATRIX* RotMatrixYXZ(struct SVECTOR* r, MATRIX* m);
 extern MATRIX* RotMatrixZYX_gte(struct SVECTOR* r, MATRIX* m);

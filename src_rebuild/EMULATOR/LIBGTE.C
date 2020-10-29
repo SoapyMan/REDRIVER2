@@ -1323,6 +1323,21 @@ void SetFarColor(long rfc, long gfc, long bfc)
 	UNIMPLEMENTED();
 }
 
+void IdentityMatrix(MATRIX *m)
+{
+	m->m[0][0] = ONE;
+	m->m[0][1] = 0;
+	m->m[0][2] = 0;
+
+	m->m[1][0] = 0;
+	m->m[1][1] = ONE;
+	m->m[1][2] = 0;
+
+	m->m[2][0] = 0;
+	m->m[2][1] = 0;
+	m->m[2][2] = ONE;
+}
+
 #define	APPLYMATRIX(m,v0,v1)	{\
 	int vx = v0->vx;\
 	int vy = v0->vy;\
@@ -1650,17 +1665,7 @@ MATRIX* RotMatrixZYX_gte(SVECTOR* r, MATRIX* m)
 	// TODO:...
 #else
 	// FIXME: make a proper function
-	m->m[0][0] = 0x1000;
-	m->m[0][1] = 0;
-	m->m[0][2] = 0;
-
-	m->m[1][0] = 0;
-	m->m[1][1] = 0x1000;
-	m->m[1][2] = 0;
-
-	m->m[2][0] = 0;
-	m->m[2][1] = 0;
-	m->m[2][2] = 0x1000;
+	IdentityMatrix(m);
 
 	RotMatrixX(r->vx, m);
 	RotMatrixY(r->vy, m);
